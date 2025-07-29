@@ -6,21 +6,21 @@ import (
 	"test-backend/internal/config"
 	"test-backend/internal/controller"
 
-	fiber "github.com/gofiber/fiber/v3"
+	"github.com/gin-gonic/gin"
 )
 
 // Server ...
 type Server struct {
 	Gateway controller.Gateway
 	config  *config.Configuration
-	App     *fiber.App
+	App     *gin.Engine
 }
 
 // StartRestful ...
 func (s *Server) StartRestful() error {
 	log.Println("[Server:StartRestful] Server listening on restful port: ", s.config.Port)
 	addr := fmt.Sprintf("0.0.0.0:%s", s.config.Port)
-	return s.App.Listen(addr)
+	return s.App.Run(addr) // Run Gin server
 }
 
 // NewServer ...
@@ -28,10 +28,11 @@ func NewServer(
 	g controller.Gateway,
 	c *config.Configuration,
 ) *Server {
-	app := fiber.New()
+	engine := gin.New()
+	engine.Use(gin.Logger(), gin.Recovery())
 
 	s := &Server{
-		App:     app,
+		App:     engine,
 		Gateway: g,
 		config:  c,
 	}
