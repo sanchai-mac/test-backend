@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  test-backend:
+    container_name: test-backend
+    image: test-backend
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      - PORT=80
+      - CUSTORMER_DB=postgres://postgres:password123@customer-db:5432/${db:-custormer_db}?sslmode=disable
+    command:
+      - /bin/sh
+      - "-c"
+      - |
+        go mod tidy
+        go mod vendor
+        air -c .air.toml
+    ports:
+      - 2100:80
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - ./:/app
+    networks:
+      - test_network
+
+  customer-db:
+    container_name: customer-db
+    user: root
+    image: bitnami/postgresql:16.1.0
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+    environment:
+      - POSTGRESQL_DATABASE=${db:-customer_db}
+      - POSTGRESQL_PASSWORD=password123
+      - PGPASSWORD=password123
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U postgres -d ${db:-customer_db}'" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    ports:
+      - 11432:5432
+    volumes:
+      - .persistence/db:/bitnami/postgresql
+    networks:
+      - test_network
+    logging:
+      options:
+        max-size: 10m
+        max-file: "10"
+
+  customer-migrations:
+    container_name: customer-migrations
+    user: ${UID:-1000}:${GID:-1000}
+    image: ghcr.io/amacneil/dbmate:2.19
+    depends_on:
+      customer-db:
+        condition: service_healthy
+    command: up
+    env_file: ".env"
+    volumes:
+      - ./db:/db
+    networks:
+      - test_network
+
+  test-customer-db:
+    container_name: test-customer-db
+    user: root
+    image: bitnami/postgresql:16.1.0
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+    environment:
+      - POSTGRESQL_DATABASE=${db:-test_customer_db}
+      - POSTGRESQL_PASSWORD=password123
+      - PGPASSWORD=password123
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U postgres -d ${db:-test_customer_db}'" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
+    ports:
+      - 11432:5432
+    volumes:
+      - .persistence/db:/bitnami/postgresql
+    networks:
+      - test_network
+    logging:
+      options:
+        max-size: 10m
+        max-file: "10"
+
+  test-customer-migrations:
+    container_name: test-customer-migrations
+    user: ${UID:-1000}:${GID:-1000}
+    image: ghcr.io/amacneil/dbmate:2.19
+    depends_on:
+      test-customer-db:
+        condition: service_healthy
+    command: up
+    env_file: ".env"
+    volumes:
+      - ./db:/db
+    networks:
+      - test_network
+    environment:
+      - DATABASE_URL=postgres://postgres:password123@test-customer-db:5432/${db:-test_customer_db}?sslmode=disable
+networks:
+  test_network:
+    external: true
