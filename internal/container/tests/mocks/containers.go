@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"test-backend/internal/config"
 	"test-backend/internal/container"
@@ -63,11 +62,8 @@ func (c TestContainer) JsonToStruct(filePath string, db *database.DB) {
 
 	for _, data := range mockData {
 		for _, rec := range data.Records {
-			formatKey, formatVals, err := formatData(rec)
-			require.NoError(c.t, err, "Error formatting data")
-
-			query := fmt.Sprintf(`INSERT INTO %s %s VALUES %s`, data.TableName, formatKey, formatVals)
-			log.Printf("Executing query: %s\n", query)
+			tx := db.CostomerDB.Table(data.TableName).Create(rec)
+			require.NoError(c.t, tx.Error, "Failed to execute insert query")
 		}
 	}
 }

@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"log"
 	"reflect"
 	"test-backend/internal/config"
@@ -47,7 +48,7 @@ type Client struct {
 }
 
 type SetupOptions struct {
-	MockSuiteDB func()
+	MockSuiteDB func(db *database.DB)
 	MockClient  bool
 	Mock        *Mock
 }
@@ -67,7 +68,7 @@ func SetupSuite(tb testing.TB, opts SetupOptions) TestTools {
 	c.RequireInvoke(func(db *database.DB, s *server.Server) {
 		cleanMockData(db, nil)
 		if opts.MockSuiteDB != nil {
-
+			opts.MockSuiteDB(db)
 		}
 
 		if opts.Mock != nil {
@@ -81,7 +82,8 @@ func SetupSuite(tb testing.TB, opts SetupOptions) TestTools {
 
 			// Clean mock setup testsuite
 			c.RequireInvoke(func(db *database.DB, s *server.Server) {
-
+				sqlDB, _ := db.CostomerDB.DB()
+				sqlDB.Close()
 			})
 		},
 		C: c,
@@ -132,6 +134,8 @@ func SetupTest(tb testing.TB, opts SetupOptions) TestTools {
 		Teardown: func(tb testing.TB) {
 			log.Println("teardown test")
 			c.RequireInvoke(func(db *database.DB, s *server.Server) {
+				sqlDB, _ := db.CostomerDB.DB()
+				sqlDB.Close()
 			})
 		},
 		C:      c,
@@ -140,7 +144,8 @@ func SetupTest(tb testing.TB, opts SetupOptions) TestTools {
 }
 
 func mockDbWithJson(tb testing.TB, c *container_mock.TestContainer, db *database.DB, mockFilePaths []string) {
-	for _, path := range mockFilePaths {
+	for i, path := range mockFilePaths {
+		fmt.Println("mockFilePaths: ", i)
 		c.JsonToStruct(path, db)
 	}
 }
@@ -156,6 +161,16 @@ func decorateMock(c *container_mock.TestContainer, m *Mock) {
 }
 
 func cleanMockData(db *database.DB, ignore []string) {
+	//TODO: I'll come and update it soon.
+	tables := []string{
+		"users",
+	}
+	for _, table := range tables {
+		tx := db.CostomerDB.Exec(fmt.Sprintf("DELETE FROM %s;", table))
+		if tx.Error != nil {
+			log.Fatalf("Error executing DELETE query: %v", tx.Error)
+		}
+	}
 }
 
 // Assertion

@@ -1,17 +1,17 @@
 [
     {
-        "table_name": "user",
+        "table_name": "users",
         "records": [
             {
                 "user_id": "4f6aa9d3-8eca-4045-aa38-4914f8038453",
-                "user_name": "ชัยนา",
+                "first_name": "ชัยนา",
                 "last_name": "มานอก",
                 "created_at": "2025-03-30T06:00:02+07:00",
                 "updated_at": "2025-03-30T06:00:02+07:00"
             },
             {
                 "user_id": "4f6aa9d3-8eca-4045-aa38-4914f8038454",
-                "user_name": "มีนา",
+                "first_name": "มีนา",
                 "last_name": "แสนหา",
                 "created_at": "2025-03-30T06:00:02+07:00",
                 "updated_at": "2025-03-30T06:00:02+07:00"

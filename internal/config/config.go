@@ -25,9 +25,11 @@ func NewConfiguration() *Configuration {
 		log.Printf("Warning: Could not load .env file: %v", err)
 	}
 
-	cfg := &Configuration{}
+	cfg := &Configuration{
+		//		CustomerDB: viper.GetString("CUSTORMER_DB"),
+	}
 	cfg.Port = os.Getenv("PORT")
-	cfg.FilesDirectory = os.Getenv("FILES_DIRECTORY")
+	cfg.CustomerDB = os.Getenv("CUSTORMER_DB")
 
 	return cfg
 }

@@ -25,6 +25,7 @@ func NewDB(
 	if err != nil {
 		log.Fatalf("[DB:NewDB] ConnectPostgres (CustomerDB): %s\n", err)
 	}
+
 	db.CostomerDB = costomerDB
 	log.Println("[DB:NewDB] Connected to CustomerDB successfully")
 

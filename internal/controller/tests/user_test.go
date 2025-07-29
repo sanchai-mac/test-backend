@@ -35,7 +35,8 @@ func TestGetUser(t *testing.T) {
 			Data   *model.User `json:"data"`
 		}
 	}
-
+	loc, _ := time.LoadLocation("Asia/Bangkok")
+	mockDate := time.Date(2025, 3, 30, 6, 0, 2, 0, loc)
 	suite := tests.Testcase{
 		"000.Get User.": {
 			Mock: &tests.Mock{
@@ -51,10 +52,10 @@ func TestGetUser(t *testing.T) {
 					Status: "Success",
 					Data: &model.User{
 						UserId:    uuid.MustParse("4f6aa9d3-8eca-4045-aa38-4914f8038453"),
-						UserName:  "ชัยนา",
+						FirstName: "ชัยนา",
 						LastName:  "มานอก",
-						CreatedAt: &time.Time{},
-						UpdatedAt: &time.Time{},
+						CreatedAt: &mockDate,
+						UpdatedAt: &mockDate,
 					},
 				},
 			},
@@ -69,7 +70,7 @@ func TestGetUser(t *testing.T) {
 				input := tc.Input.(input)
 				expected := tc.Expected.(expected)
 				app := fiber.New()
-				app.Get("/api/v1/user/:id", i.GetUser)
+				app.Get("/api/v1/user/:user_id", i.GetUser)
 				req := httptest.NewRequest(http.MethodGet, "/api/v1/user/"+input.UserId, nil)
 				actual, err := app.Test(req)
 				if err != nil {
@@ -82,10 +83,20 @@ func TestGetUser(t *testing.T) {
 					require.NoError(t, err)
 					var actualResponse entity.GetUserResponse
 					err = json.Unmarshal(bodyBytes, &actualResponse)
+					createdAtStr := actualResponse.Data.CreatedAt.Format("2006-01-02 15:04:05")
+					createdAt, err := time.ParseInLocation("2006-01-02 15:04:05", createdAtStr, loc)
+					require.NoError(t, err)
+					actualResponse.Data.CreatedAt = &createdAt
+
+					updatedAtStr := actualResponse.Data.UpdatedAt.Format("2006-01-02 15:04:05")
+					updatedAt, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr, loc)
+					require.NoError(t, err)
+					actualResponse.Data.UpdatedAt = &updatedAt
+
 					require.NoError(t, err)
 					assert.Equal(t, expected.httpStatusCode, actual.StatusCode, "Check HTTP status code")
 					assert.Equal(t, expected.response.Status, actualResponse.Status, "Check Response status")
-					assert.ElementsMatch(t, expected.response.Data, actualResponse.Data, "Check Employee records")
+					assert.Equal(t, expected.response.Data, actualResponse.Data, "Check Employee records")
 				}
 			})
 		})
