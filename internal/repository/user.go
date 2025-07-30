@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"errors"
 	"log"
 	"test-backend/internal/config"
 	"test-backend/internal/infrastructure/database"
 	"test-backend/internal/model"
+	"test-backend/internal/util/error_wrapper"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,9 +38,15 @@ func (r *UserRepository) GetUser(ctx *gin.Context, id string) (*model.User, erro
 	log.Printf("[Repository:GetUser] UserId: %s", id)
 
 	user := &model.User{}
-	if tx := r.db.CostomerDB.Where(`user_id = ?`, id).Find(&user); tx.Error != nil {
+	tx := r.db.CostomerDB.Where(`user_id = ?`, id).Find(&user)
+	if tx.Error != nil {
 		log.Printf("[Repository:GetUser] Find user error: %s", tx.Error)
 		return nil, tx.Error
+	}
+
+	if tx.RowsAffected == 0 {
+		log.Printf("[Repository:GetUser] No user found with id: %s", id)
+		return nil, errors.New(error_wrapper.NOT_FOUND.String())
 	}
 	return user, nil
 }

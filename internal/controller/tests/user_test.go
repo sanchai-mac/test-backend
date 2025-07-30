@@ -64,6 +64,22 @@ func TestGetUser(t *testing.T) {
 				},
 			},
 		},
+		"001.Get User Not Found.": {
+			Mock: &tests.Mock{
+				MockFilePaths: []string{"./mocks/user.json"},
+			},
+			Input: input{
+				UserId: "4f6aa9d3-8eca-4045-aa38-4914f8038477",
+			},
+			Expected: expected{
+				error:          nil,
+				httpStatusCode: http.StatusNotFound,
+				response: entity.GetUserResponse{
+					Status: "Not Found",
+					Data:   &model.User{},
+				},
+			},
+		},
 	}
 
 	for name, tc := range suite {
@@ -93,19 +109,25 @@ func TestGetUser(t *testing.T) {
 				err = json.Unmarshal(bodyBytes, &actualResponse)
 				require.NoError(t, err)
 
-				createdAtStr := actualResponse.Data.CreatedAt.Format("2006-01-02 15:04:05")
-				createdAt, err := time.ParseInLocation("2006-01-02 15:04:05", createdAtStr, loc)
-				require.NoError(t, err)
-				actualResponse.Data.CreatedAt = &createdAt
+				if actual.StatusCode == 200 {
+					createdAtStr := actualResponse.Data.CreatedAt.Format("2006-01-02 15:04:05")
+					createdAt, err := time.ParseInLocation("2006-01-02 15:04:05", createdAtStr, loc)
+					require.NoError(t, err)
+					actualResponse.Data.CreatedAt = &createdAt
 
-				updatedAtStr := actualResponse.Data.UpdatedAt.Format("2006-01-02 15:04:05")
-				updatedAt, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr, loc)
-				require.NoError(t, err)
-				actualResponse.Data.UpdatedAt = &updatedAt
+					updatedAtStr := actualResponse.Data.UpdatedAt.Format("2006-01-02 15:04:05")
+					updatedAt, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr, loc)
+					require.NoError(t, err)
+					actualResponse.Data.UpdatedAt = &updatedAt
 
-				assert.Equal(t, expected.httpStatusCode, actual.StatusCode, "Check HTTP status code")
-				assert.Equal(t, expected.response.Status, actualResponse.Status, "Check Response status")
-				assert.Equal(t, expected.response.Data, actualResponse.Data, "Check User data")
+					assert.Equal(t, expected.httpStatusCode, actual.StatusCode, "Check HTTP status code")
+					assert.Equal(t, expected.response.Status, actualResponse.Status, "Check Response status")
+					assert.Equal(t, expected.response.Data, actualResponse.Data, "Check User data")
+				}
+				if actual.StatusCode == 404 {
+					assert.Equal(t, expected.httpStatusCode, actual.StatusCode, "Check HTTP status code")
+					assert.Equal(t, expected.response.Status, actualResponse.Status, "Check Response status")
+				}
 			})
 		})
 	}
