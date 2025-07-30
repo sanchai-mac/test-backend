@@ -81,7 +81,7 @@ func (c *UserController) CreateUser(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, entity.GetUserResponse{
+	ctx.JSON(http.StatusCreated, entity.GetUserResponse{
 		Status: "Success",
 	})
 }
@@ -89,7 +89,7 @@ func (c *UserController) CreateUser(ctx *gin.Context) {
 // UpdateUser...
 func (c *UserController) UpdateUser(ctx *gin.Context) {
 	id := ctx.Param("user_id")
-	log.Println("[Controller:DeleteUserByUserId] Request user_id: ", id)
+	log.Println("[Controller:UpdateUser] Request user_id: ", id)
 	input := &entity.UserRequest{}
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, entity.GetUserResponse{
@@ -98,6 +98,7 @@ func (c *UserController) UpdateUser(ctx *gin.Context) {
 		return
 	}
 
+	input.UserId = id
 	err := c.iUserService.UpdateUser(ctx, input)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, entity.GetUserResponse{

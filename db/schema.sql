@@ -61,5 +61,4 @@ ALTER TABLE ONLY public.schema_migrations
 --
 
 INSERT INTO public.schema_migrations (version) VALUES
-    ('20250729'),
     ('20250730');

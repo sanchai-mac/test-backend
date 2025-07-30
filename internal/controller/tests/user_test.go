@@ -140,7 +140,7 @@ func TestCreateUser(t *testing.T) {
 			},
 			Expected: expected{
 				error:          nil,
-				httpStatusCode: http.StatusOK,
+				httpStatusCode: http.StatusCreated,
 				response: entity.GetUserResponse{
 					Status: "Success",
 				},
@@ -161,7 +161,7 @@ func TestCreateUser(t *testing.T) {
 				expected := tc.Expected.(expected)
 				gin.SetMode(gin.TestMode)
 				router := gin.New()
-				router.POST("/api/v1/user/update", i.CreateUser)
+				router.POST("/api/v1/user/create", i.CreateUser)
 
 				input := tc.Input.(input)
 				bodyJSON, err := json.Marshal(input)
@@ -205,6 +205,7 @@ func TestUpdateUser(t *testing.T) {
 	defer testTools.Teardown(t)
 
 	type input struct {
+		UserId    string
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
 	}
@@ -217,11 +218,12 @@ func TestUpdateUser(t *testing.T) {
 	}
 
 	suite := tests.Testcase{
-		"000.Create User": {
+		"000.Update User": {
 			Mock: &tests.Mock{
 				MockFilePaths: []string{"./mocks/user.json"},
 			},
 			Input: input{
+				UserId:    "4f6aa9d3-8eca-4045-aa38-4914f8038453",
 				FirstName: "ชาติชาย",
 				LastName:  "ใจดี",
 			},
@@ -248,13 +250,13 @@ func TestUpdateUser(t *testing.T) {
 				expected := tc.Expected.(expected)
 				gin.SetMode(gin.TestMode)
 				router := gin.New()
-				router.POST("/api/v1/user/", i.CreateUser)
+				router.PUT("/api/v1/user/:user_id", i.UpdateUser)
 
 				input := tc.Input.(input)
 				bodyJSON, err := json.Marshal(input)
 				require.NoError(t, err)
 
-				req := httptest.NewRequest(http.MethodPost, "/api/v1/user/create", bytes.NewBuffer(bodyJSON))
+				req := httptest.NewRequest(http.MethodPut, "/api/v1/user/"+input.UserId, bytes.NewBuffer(bodyJSON))
 				req.Header.Set("Content-Type", "application/json")
 
 				w := httptest.NewRecorder()
@@ -274,12 +276,101 @@ func TestUpdateUser(t *testing.T) {
 				assert.Equal(t, expected.response.Status, actualResponse.Status, "Check Response status")
 
 				user := &model.User{}
-				tx := db.CostomerDB.Where(`first_name = ?`, input.FirstName).Find(&user)
+				tx := db.CostomerDB.Where(`user_id = ?`, input.UserId).Find(&user)
 				if tx.Error != nil {
 					require.Error(t, tx.Error)
 				}
 				assert.Equal(t, expected.user.FirstName, user.FirstName, "Check Response User")
 				assert.Equal(t, expected.user.LastName, user.LastName, "Check Response User")
+			})
+		})
+	}
+}
+
+// TestDeleteUser...
+func TestDeleteUser(t *testing.T) {
+	testTools := tests.SetupSuite(t, tests.SetupOptions{})
+	defer testTools.Teardown(t)
+
+	type input struct {
+		UserId string
+	}
+
+	type expected struct {
+		error          error
+		httpStatusCode int
+		response       entity.GetUserResponse
+		user           *model.User
+	}
+
+	loc, _ := time.LoadLocation("Asia/Bangkok")
+	mockDate := time.Date(2025, 3, 30, 6, 0, 2, 0, loc)
+
+	suite := tests.Testcase{
+		"000.Delete User.": {
+			Mock: &tests.Mock{
+				MockFilePaths: []string{"./mocks/user.json"},
+			},
+			Input: input{
+				UserId: "4f6aa9d3-8eca-4045-aa38-4914f8038453",
+			},
+			Expected: expected{
+				error:          nil,
+				httpStatusCode: http.StatusOK,
+				response: entity.GetUserResponse{
+					Status: "Success",
+				},
+				user: &model.User{
+					UserId:    uuid.MustParse("4f6aa9d3-8eca-4045-aa38-4914f8038454"),
+					FirstName: "มีนา",
+					LastName:  "แสนหา",
+					CreatedAt: &mockDate,
+					UpdatedAt: &mockDate,
+				},
+			},
+		},
+	}
+
+	for name, tc := range suite {
+		t.Run(name, func(t *testing.T) {
+			testTools := tests.SetupTest(t, tests.SetupOptions{Mock: tc.Mock})
+			defer testTools.Teardown(t)
+
+			testTools.C.RequireInvoke(func(i controller.IUserController, db *database.DB) {
+				input := tc.Input.(input)
+				expected := tc.Expected.(expected)
+
+				gin.SetMode(gin.TestMode)
+				router := gin.New()
+				router.DELETE("/api/v1/user/:user_id", i.DeleteUserByUserId)
+
+				req := httptest.NewRequest(http.MethodDelete, "/api/v1/user/"+input.UserId, nil)
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, req)
+
+				actual := w.Result()
+				defer actual.Body.Close()
+
+				bodyBytes, err := ioutil.ReadAll(actual.Body)
+				require.NoError(t, err)
+
+				var actualResponse entity.GetUserResponse
+				err = json.Unmarshal(bodyBytes, &actualResponse)
+				require.NoError(t, err)
+
+				actualUser := &model.User{}
+				tx := db.CostomerDB.Where(`user_id = ?`, expected.user.UserId).Find(&actualUser)
+				if tx.Error != nil {
+					require.Error(t, tx.Error)
+				}
+				updatedAtStr := actualUser.UpdatedAt.Format("2006-01-02 15:04:05")
+				mockDate, err := time.ParseInLocation("2006-01-02 15:04:05", updatedAtStr, loc)
+				require.NoError(t, err)
+				actualUser.UpdatedAt = &mockDate
+				actualUser.CreatedAt = &mockDate
+				assert.Equal(t, expected.user, actualUser, "Check User data")
+				assert.Equal(t, expected.httpStatusCode, actual.StatusCode, "Check HTTP status code")
+				assert.Equal(t, expected.response.Status, actualResponse.Status, "Check Response status")
 			})
 		})
 	}
