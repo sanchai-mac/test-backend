@@ -21,7 +21,7 @@ type IUserController interface {
 	GetUser(ctx *gin.Context)
 	CreateUser(ctx *gin.Context)
 	UpdateUser(ctx *gin.Context)
-	DeleteUser(ctx *gin.Context)
+	DeleteUserByUserId(ctx *gin.Context)
 }
 
 func NewUserController(
@@ -34,7 +34,6 @@ func NewUserController(
 	}
 }
 
-// GetUser...
 // GetUser...
 func (c *UserController) GetUser(ctx *gin.Context) {
 	id := ctx.Param("user_id")
@@ -66,7 +65,7 @@ func (c *UserController) GetUser(ctx *gin.Context) {
 func (c *UserController) CreateUser(ctx *gin.Context) {
 	log.Println("[Controller:CreateUser] Called...")
 
-	input := &entity.CreateUserRequest{}
+	input := &entity.UserRequest{}
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, entity.GetUserResponse{
 			Status: "Bad Request",
@@ -76,7 +75,6 @@ func (c *UserController) CreateUser(ctx *gin.Context) {
 
 	err := c.iUserService.CreateUser(ctx, input)
 	if err != nil {
-		log.Println("[CreateUser] Service error:", err)
 		ctx.JSON(http.StatusInternalServerError, entity.GetUserResponse{
 			Status: "Internal Server Error",
 		})
@@ -88,5 +86,45 @@ func (c *UserController) CreateUser(ctx *gin.Context) {
 	})
 }
 
-func (c *UserController) UpdateUser(ctx *gin.Context)
-func (c *UserController) DeleteUser(ctx *gin.Context)
+// UpdateUser...
+func (c *UserController) UpdateUser(ctx *gin.Context) {
+	id := ctx.Param("user_id")
+	log.Println("[Controller:DeleteUserByUserId] Request user_id: ", id)
+	input := &entity.UserRequest{}
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, entity.GetUserResponse{
+			Status: "Bad Request",
+		})
+		return
+	}
+
+	err := c.iUserService.UpdateUser(ctx, input)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, entity.GetUserResponse{
+			Status: "Internal Server Error",
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, entity.GetUserResponse{
+		Status: "Success",
+	})
+}
+
+// DeleteUserByUserId...
+func (c *UserController) DeleteUserByUserId(ctx *gin.Context) {
+	id := ctx.Param("user_id")
+	log.Println("[Controller:DeleteUserByUserId] Request user_id: ", id)
+
+	err := c.iUserService.DeleteUserByUserId(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, entity.GetUserResponse{
+			Status: "Internal Server Error",
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, entity.GetUserResponse{
+		Status: "Success",
+	})
+}

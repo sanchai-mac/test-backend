@@ -161,7 +161,94 @@ func TestCreateUser(t *testing.T) {
 				expected := tc.Expected.(expected)
 				gin.SetMode(gin.TestMode)
 				router := gin.New()
-				router.POST("/api/v1/user/create", i.CreateUser)
+				router.POST("/api/v1/user/update", i.CreateUser)
+
+				input := tc.Input.(input)
+				bodyJSON, err := json.Marshal(input)
+				require.NoError(t, err)
+
+				req := httptest.NewRequest(http.MethodPost, "/api/v1/user/create", bytes.NewBuffer(bodyJSON))
+				req.Header.Set("Content-Type", "application/json")
+
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, req)
+
+				actual := w.Result()
+				defer actual.Body.Close()
+
+				bodyBytes, err := ioutil.ReadAll(actual.Body)
+				require.NoError(t, err)
+
+				var actualResponse entity.GetUserResponse
+				err = json.Unmarshal(bodyBytes, &actualResponse)
+				require.NoError(t, err)
+
+				assert.Equal(t, expected.httpStatusCode, actual.StatusCode, "Check HTTP status code")
+				assert.Equal(t, expected.response.Status, actualResponse.Status, "Check Response status")
+
+				user := &model.User{}
+				tx := db.CostomerDB.Where(`first_name = ?`, input.FirstName).Find(&user)
+				if tx.Error != nil {
+					require.Error(t, tx.Error)
+				}
+				assert.Equal(t, expected.user.FirstName, user.FirstName, "Check Response User")
+				assert.Equal(t, expected.user.LastName, user.LastName, "Check Response User")
+			})
+		})
+	}
+}
+
+// TestCreateUser...
+func TestUpdateUser(t *testing.T) {
+	// Setup suite and teardown
+	testTools := tests.SetupSuite(t, tests.SetupOptions{})
+	defer testTools.Teardown(t)
+
+	type input struct {
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+	}
+
+	type expected struct {
+		error          error
+		httpStatusCode int
+		response       entity.GetUserResponse
+		user           *model.User
+	}
+
+	suite := tests.Testcase{
+		"000.Create User": {
+			Mock: &tests.Mock{
+				MockFilePaths: []string{"./mocks/user.json"},
+			},
+			Input: input{
+				FirstName: "ชาติชาย",
+				LastName:  "ใจดี",
+			},
+			Expected: expected{
+				error:          nil,
+				httpStatusCode: http.StatusOK,
+				response: entity.GetUserResponse{
+					Status: "Success",
+				},
+				user: &model.User{
+					FirstName: "ชาติชาย",
+					LastName:  "ใจดี",
+				},
+			},
+		},
+	}
+
+	for name, tc := range suite {
+		t.Run(name, func(t *testing.T) {
+			testTools := tests.SetupTest(t, tests.SetupOptions{Mock: tc.Mock})
+			defer testTools.Teardown(t)
+
+			testTools.C.RequireInvoke(func(i controller.IUserController, db *database.DB) {
+				expected := tc.Expected.(expected)
+				gin.SetMode(gin.TestMode)
+				router := gin.New()
+				router.POST("/api/v1/user/", i.CreateUser)
 
 				input := tc.Input.(input)
 				bodyJSON, err := json.Marshal(input)

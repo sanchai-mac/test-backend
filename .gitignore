@@ -1,0 +1,17 @@
+.idea/
+
+*.DS_Store
+*.helmignore
+
+*.tmp
+.devcontainer
+
+.vscode/
+generated/
+
+# go
+tmp/
+.cache/
+bin/
+.env
+.persistence/
