@@ -13,5 +13,4 @@ generated/
 tmp/
 .cache/
 bin/
-.env
 .persistence/
